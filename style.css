@@ -1,0 +1,19 @@
+body {
+    font-family: sans-serif;
+    padding: 2rem;
+    background: #f3f3f3;
+    color: #333;
+}
+h1 {
+    color: #0077cc;
+}
+.partido {
+    background: white;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #ccc;
+}
+.pronostico {
+    margin-top: 0.5rem;
+}

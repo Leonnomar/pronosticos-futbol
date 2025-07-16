@@ -1,0 +1,26 @@
+{
+    "partidos": [
+        {
+            "id": 1,
+            "local": "Barcelona",
+            "visitante": "Real Madrid",
+            "resultado": "2-1"
+        },
+        {
+            "id": 2,
+            "local": "Manchester City",
+            "visitante": "Liverpool",
+            "resultado": "1-1"
+        }
+    ],
+    "pronosticos": {
+        "ramon": {
+            "1": "2-1",
+            "2": "0-2"
+        },
+        "uziel": {
+            "1": "1-2",
+            "2": "1-1"
+        }
+    }
+}
