@@ -42,15 +42,16 @@ function renderizarPartidosSemana() {
 
     for (const nombreLiga in ligasMap) {
         const seccion = document.createElement("section");
-        seccion.className = "bg-white rounded-xl shadow p-5";
+        seccion.className = "bg-white rounded-xl shadow p-5 space-y-3";
 
         const titulo = document.createElement("h2");
         titulo.textContent = nombreLiga;
+        titulo.className = "text-xl font-bold mb-2";
         seccion.appendChild(titulo);
 
         ligasMap[nombreLiga].forEach(partido => {
             const div = document.createElement("div");
-            div.className = "flex items-center gap-4 p-3 border rounded-lg";
+            div.className = "flex items-center justify-between gap-4 p-3 border rounded-lg";
 
             const equipos = `${partido.equipo1} vs ${partido.equipo2}`;
             const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}`;
@@ -63,24 +64,52 @@ function renderizarPartidosSemana() {
                 minute: "2-digit"
             });
 
-            const input = document.createElement("input");
-            input.type = "text";
-            input.placeholder = "Tu pronóstico";
-            input.value = localStorage.getItem(clave) || "";
-            input.className = "w-20 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500";
-
-            // Guardar automáticamente en localStorage cuando se cambia
-            input.addEventListener("input", () => {
-                localStorage.setItem(clave, input.value);
-            });
-
-            div.innerHTML = `
-                <div class="flex-1">
-                    <p class="font-semibold">${equipos}</p>
-                    <p class="text-sm text-gray-500">${fecha}</p>
-                </div>
+            // Info del partido
+            const info = document.createElement("div");
+            info.className = "flex-1";
+            info.innerHTML = `
+                <p class="font-semibold">${equipos}</p>
+                <p class="text-sm text-gray-500">${fecha}</p>
             `;
-            div.appendChild(input)
+
+            // Contenedor pronóstico
+            const pronostico = document.createElement("div");
+            pronostico.className = "flex items-center gap-2";
+
+            const inputLocal = document.createElement("input");
+            inputLocal.type = "number";
+            inputLocal.min = 0;
+            inputLocal.className = "w-12 text-center border rounded focus:outline-none focus:ring-2 focus:ring-green-500";
+
+            const separador = document.createElement("span");
+            separador.textContent = "-";
+            separador.className = "font-bold";
+
+            const inputVisitante = document.createElement("input");
+            inputVisitante.type = "number";
+            inputVisitante.min = 0;
+            inputVisitante.className = "w-12 text-center border rounded focus:outline-none focus:ring-2 focus:ring-green-500";
+
+            // Cargar pronóstico guardado
+            const guardado = localStorage.getItem(clave);
+            if (guardado) {
+                const [gLocal, gVisitante] = guardado.split("-");
+                inputLocal.value = gLocal;
+                inputVisitante.value = gVisitante;
+            }
+
+            // Guardar automáticamente
+            function guardarPronostico(){
+                if (inputLocal.value === "" || inputVisitante.value === "") return;
+                const valor = `${inputLocal.value}-${inputVisitante.value}`;
+                localStorage.setItem(clave, valor);
+            }
+
+            inputLocal.addEventListener("input", guardarPronostico);
+            inputVisitante.addEventListener("input", guardarPronostico);
+
+            pronostico.append(inputLocal, separador, inputVisitante);
+            div.append(info, pronostico);
             seccion.appendChild(div);
         });
 
