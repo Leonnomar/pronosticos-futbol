@@ -1,58 +1,92 @@
-const ligas = [
+const partidosSimulados = [
     {
-        nombre: "Liga MX",
-        partidos: [
-            { equipo1: "América", equipo2: "Guadalajarra" },
-            { equipo1: "Tigres", equipo2: "Monterrey" }
-        ]
+        liga: "Liga MX",
+        fecha: "2025-07-19T19:00:00",
+        equipo1: "América",
+        equipo2: "Guadalajara"
     },
     {
-        nombre: "Champions League",
-        partidos: [
-            { equipo1: "Real Madrid", equipo2: "Machester City" },
-            { equipo1: "PSG", equipo2: "Barcelona" }
-        ]
+        liga: "Liga MX",
+        fecha: "2025-07-20T21:00:00",
+        equipo1: "Tigres",
+        equipo2: "Monterrey"
     },
     {
-        nombre: "League Cup",
-        partidos: [
-            { equipo1: "Mazatlán", equipo2: "Inter Miami" }
-        ]
+        liga: "Champions League",
+        fecha: "2025-07-18T14:00:00",
+        equipo1: "Real Madrid",
+        equipo2: "Manchester City"
+    },
+    {
+        liga: "Champions League",
+        fecha: "2025-07-21T16:00:00",
+        equipo1: "Barcelona",
+        equipo2: "PSG"
     }
 ];
 
 //Función para renderizar en el HTML
-function renderizarLigas() {
+function renderizarPartidosSemana() {
     const main = document.querySelector("main");
     main.innerHTML = ""; // Limpiar contenido anterior
 
-    ligas.forEach((liga) => {
+    const ligasMap = {};
+
+    // Agrupar partidos por liga
+    partidosSimulados.forEach(partido => {
+        if (!ligasMap[partido.liga]) {
+            ligasMap[partido.liga] = [];
+        }
+        ligasMap[partido.liga].push(partido);
+    });
+
+    for (const nombreLiga in ligasMap) {
         const seccion = document.createElement("section");
-        seccion.classList.add("liga");
+        seccion.className = "bg-white rounded-xl shadow p-5";
 
         const titulo = document.createElement("h2");
-        titulo.textContent = liga.nombre;
+        titulo.textContent = nombreLiga;
         seccion.appendChild(titulo);
 
-        liga.partidos.forEach((partido) => {
-            const divPartido = document.createElement("div");
-            divPartido.classList.add("partido");
+        ligasMap[nombreLiga].forEach(partido => {
+            const div = document.createElement("div");
+            div.className = "flex items-center gap-4 p-3 border rounded-lg";
 
-            const texto = document.createElement("span");
-            texto.textContent = `${partido.equipo1} vs ${partido.equipo2}`;
+            const equipos = `${partido.equipo1} vs ${partido.equipo2}`;
+            const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}`;
+
+            const fecha = new Date(partido.fecha).toLocaleString("es-MX", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit"
+            });
 
             const input = document.createElement("input");
             input.type = "text";
-            input.placeholder = "Tu pronostico";
+            input.placeholder = "Tu pronóstico";
+            input.value = localStorage.getItem(clave) || "";
+            input.className = "w-20 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500";
 
-            divPartido.appendChild(texto);
-            divPartido.appendChild(input);
-            seccion.appendChild(divPartido);
+            // Guardar automáticamente en localStorage cuando se cambia
+            input.addEventListener("input", () => {
+                localStorage.setItem(clave, input.value);
+            });
+
+            div.innerHTML = `
+                <div class="flex-1">
+                    <p class="font-semibold">${equipos}</p>
+                    <p class="text-sm text-gray-500">${fecha}</p>
+                </div>
+            `;
+            div.appendChild(input)
+            seccion.appendChild(div);
         });
 
         main.appendChild(seccion);
-    });
+    }
 }
 
 // Ejecutar al cargar la pagina
-document.addEventListener("DOMContentLoaded", renderizarLigas);
+document.addEventListener("DOMContentLoaded", renderizarPartidosSemana);

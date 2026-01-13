@@ -4,20 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PronósBrous</title>
-    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<script src="app.js"></script>
-<body>
-    <header>
-        <h1>Pronósticos de futbol</h1>
-        <nav>
-            <a href="#">Pronósticos</a>
-            <a href="#">Tablas</a>
-            <a href="#">Estadisticas</a>
-            <a href="#">Perfil</a>
-        </nav>
+
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-green-600">PronósBrous ⚽</h1>
+            <nav class="space-x-6 font-semibold">
+                <a href="#" class="hover:text-green-600">Pronósticos</a>
+                <a href="#" class="hover:text-green-600">Tablas</a>
+                <a href="#" class="hover:text-green-600">Estadisticas</a>
+                <a href="#" class="hover:text-green-600">Perfil</a>
+            </nav>
+        </div>
     </header>
-    <main>
+
+    <!-- Main -->
+    <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
         <section class="liga">
             <h2>Liga A</h2>
             <div class="partido">
@@ -52,5 +58,7 @@
             </div>
         </section>
     </main>
+
+    <script src="app.js"></script>
 </body>
 </html>
