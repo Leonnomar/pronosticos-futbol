@@ -53,8 +53,14 @@ function renderizarPartidosSemana() {
             const div = document.createElement("div");
             div.className = "flex items-center justify-between gap-4 p-3 border rounded-lg";
 
+            const info = document.createElement("div");
+            info.className = "flex-1";
+
             const equipos = `${partido.equipo1} vs ${partido.equipo2}`;
             const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}`;
+
+            const fechaPartido = new Date(partido.fecha);
+            const ahora = new Date();
 
             const fecha = new Date(partido.fecha).toLocaleString("es-MX", {
                 weekday: "short",
@@ -64,22 +70,44 @@ function renderizarPartidosSemana() {
                 minute: "2-digit"
             });
 
-            // Info del partido
-            const info = document.createElement("div");
-            info.className = "flex-1";
-            info.innerHTML = `
-                <p class="font-semibold">${equipos}</p>
-                <p class="text-sm text-gray-500">${fecha}</p>
-            `;
+            // ===== BADGE =====
+            const badge = document.createElement("span");
+            let estadoPartido = "pendiente";
 
-            // Contenedor pronóstico
+            if (ahora >=  fechaPartido) {
+                estadoPartido = "en-juego";
+                badge.textContent = "En juego";
+                badge.className = "text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold";
+            } else {
+                badge.textContent = "Pendiente";
+                badge.className = "text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full font-semibold";
+            }
+
+            // ===== TÍTULO =====
+            const tituloPartido = document.createElement("div");
+            tituloPartido.className = "flex items-center gap-2";
+
+            const textoEquipos = document.createElement("p");
+            textoEquipos.className = "font-semibold";
+            textoEquipos.textContent = equipos;
+
+            tituloPartido.append(textoEquipos, badge);
+            info.append(tituloPartido);
+
+            // ===== FECHA =====
+            const fechaTexto = document.createElement("p");
+            fechaTexto.className = "text-sm text-gray-500";
+            fechaTexto.textContent = fecha;
+            info.appendChild(fechaTexto);
+
+            // ===== PRONÓSTTICO =====
             const pronostico = document.createElement("div");
             pronostico.className = "flex items-center gap-2";
 
             const inputLocal = document.createElement("input");
             inputLocal.type = "number";
             inputLocal.min = 0;
-            inputLocal.className = "w-12 text-center border rounded focus:outline-none focus:ring-2 focus:ring-green-500";
+            inputLocal.className = "w-12 text-center border rounded";
 
             const separador = document.createElement("span");
             separador.textContent = "-";
@@ -88,8 +116,16 @@ function renderizarPartidosSemana() {
             const inputVisitante = document.createElement("input");
             inputVisitante.type = "number";
             inputVisitante.min = 0;
-            inputVisitante.className = "w-12 text-center border rounded focus:outline-none focus:ring-2 focus:ring-green-500";
+            inputVisitante.className = "w-12 text-center border rounded";
 
+            // Bloqueo por fecha
+            if (estadoPartido === "en-juego") {
+                inputLocal.disabled = true;
+                inputVisitante.disabled = true;
+                inputLocal.classList.add("bg-gray-200", "cursor-not-allowed");
+                inputVisitante.classList.add("bg-gray-200", "cursor-not-allowed");
+            }
+            
             // Cargar pronóstico guardado
             const guardado = localStorage.getItem(clave);
             if (guardado) {
