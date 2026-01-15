@@ -14,9 +14,15 @@ const partidosSimulados = [
     },
     {
         liga: "Champions League",
+        fase: "cuartos",
+        penales: true,
         fecha: "2025-07-18T14:00:00",
         equipo1: "Real Madrid",
-        equipo2: "Manchester City"
+        equipo2: "Manchester City",
+        resultado: {
+            marcador: "1-1",
+            ganador: "local"
+        }
     },
     {
         liga: "Champions League",
@@ -25,6 +31,27 @@ const partidosSimulados = [
         equipo2: "PSG"
     }
 ];
+
+const configuracionPuntos = {
+    exacto: 5,
+    resultado: 3,
+
+    penales: {
+        activo: true,
+        puntos: 2
+    },
+
+    fasesFinales: {
+        activo: true,
+        puntosPorFase: {
+            dieciseisavos: 1,
+            octavos: 1,
+            cuartos: 2,
+            semifinal: 3,
+            final: 5
+        }
+    }
+};
 
 //Función para renderizar en el HTML
 function renderizarPartidosSemana() {
@@ -140,13 +167,27 @@ function renderizarPartidosSemana() {
             if (estadoPartido === "finalizado") {
                 const resultadoTexto = document.createElement("p");
                 resultadoTexto.className = "text-sm font-semibold mt-1";
-                resultadoTexto.textContent = `Resultado: ${partido.resultado}`;
+                let textoResultado = "";
+
+                if (typeof partido.resultado === "string") {
+                    textoResultado = partido.resultado;
+                } else if (typeof partido.resultado === "object") {
+                    textoResultado = partido.resultado.marcador;
+                }
+
+                resultadoTexto.textContent = `Resultado: ${textoResultado}`;
 
                 info.appendChild(resultadoTexto);
 
+                if (partido.resultado?.penales) {
+                    const penalesTexto = document.createElement("p");
+                    penalesTexto.className = "text-sm text-gray-500";
+                    penalesTexto.textContent = `Penales: ${partido.resultado.penales}`;
+                    info.appendChild(penalesTexto);
+                }
                 const pronosticoGuardado = localStorage.getItem(clave);
                 if (pronosticoGuardado) {
-                    const puntos = calcularPuntos(pronosticoGuardado, partido.resultado);
+                    const puntos = calcularPuntos(pronosticoGuardado, partido);
 
                     const puntosTexto = document.createElement("p");
                     puntosTexto.className =
@@ -158,6 +199,13 @@ function renderizarPartidosSemana() {
                     
                     puntosTexto.textContent = `+${puntos} pts`;
                     info.appendChild(puntosTexto);
+                }
+
+                if (partido.fase) {
+                    const bonusTexto = document.createElement("p");
+                    bonusTexto.className = "text-blue-600 font-semibold text-sm";
+                    bonusTexto.textContent = `Bonus fase ${partido.fase}`;
+                    info.appendChild(bonusTexto);
                 }
             }
 
@@ -188,18 +236,58 @@ function renderizarPartidosSemana() {
     }
 }
 // Calcular puntos
-function calcularPuntos(pronostico, resultado) {
+function calcularPuntos(pronostico, partido) {
     const [pL, pV] = pronostico.split("-").map(Number);
-    const [rL, rV] = resultado.split("-").map(Number);
+    let puntos = 0;
 
-    if (pL === rL && pV === rV) return 5;
+    // ===== RESULTADO REAL =====
+    let marcadorReal = null;
 
-    const signoPronostico = Math.sign(pL - pV);
-    const signoResultado = Math.sign(rL - rV);
+    if (typeof partido.resultado === "string") {
+        marcadorReal = partido.resultado;
+    } else if (typeof partido.resultado === "object") {
+        marcadorReal = partido.resultado.marcador;
+    }
 
-    if (signoPronostico === signoResultado) return 3;
+    if (marcadorReal){
+        const [rL, rV] = marcadorReal.split("-").map(Number);
 
-    return 0;
+        // Exacto
+        if (pL === rL && pV === rV) {
+            puntos += configuracionPuntos.exacto
+        } else {
+            const signoPronostico = Math.sign(pL - pV);
+            const signoResultado = Math.sign(rL - rV);
+
+            if (signoPronostico === signoResultado) {
+                puntos += configuracionPuntos.resultado;
+            }
+        }
+    }
+
+    // ===== PENALES =====
+    if (configuracionPuntos.penales.activo && partido.penales && partido.resultado?.ganador) {
+        const signoPronostico = Math.sign(pL - pV);
+        const ganadorPronosticado = signoPronostico > 0 ? "local" : signoPronostico < 0 ? "visitante" : "empate";
+
+        if (ganadorPronosticado === partido.resultado.ganador) {
+            puntos += configuracionPuntos.penales.puntos;
+        }
+    }
+
+    // ===== BONUS POR FASE =====
+    if (configuracionPuntos.fasesFinales.activo && partido.fase && partido.resultado?.ganador) {
+        const bonus = configuracionPuntos.fasesFinales.puntosPorFase[partido.fase] || 0;
+
+        const signoPronostico = Math.sign(pL - pV);
+        const ganadorPronosticado = signoPronostico > 0 ? "local" : signoPronostico < 0 ? "visitante" : "empate";
+
+        if (ganadorPronosticado === partido.resultado?.ganador) {
+            puntos += bonus;
+        }
+    }
+
+    return puntos;
 }
 
 // Ejecutar al cargar la pagina
