@@ -3,7 +3,8 @@ const partidosSimulados = [
         liga: "Liga MX",
         fecha: "2025-07-19T19:00:00",
         equipo1: "América",
-        equipo2: "Guadalajara"
+        equipo2: "Guadalajara",
+        resultado: "2-1"
     },
     {
         liga: "Liga MX",
@@ -74,8 +75,15 @@ function renderizarPartidosSemana() {
             const badge = document.createElement("span");
             let estadoPartido = "pendiente";
 
-            if (ahora >=  fechaPartido) {
+            if (partido.resultado) {
+                estadoPartido = "finalizado";
+            } else if (ahora >=  fechaPartido) {
                 estadoPartido = "en-juego";
+            }
+            if (estadoPartido === "finalizado"){
+                badge.textContent = "Finalizado";
+                badge.className = "text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded-full font-semibold";
+            } else if (estadoPartido === "en-juego") {
                 badge.textContent = "En juego";
                 badge.className = "text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold";
             } else {
@@ -106,6 +114,7 @@ function renderizarPartidosSemana() {
 
             const inputLocal = document.createElement("input");
             inputLocal.type = "number";
+            inputLocal.max = 20;
             inputLocal.min = 0;
             inputLocal.className = "w-12 text-center border rounded";
 
@@ -115,17 +124,43 @@ function renderizarPartidosSemana() {
 
             const inputVisitante = document.createElement("input");
             inputVisitante.type = "number";
+            inputVisitante.max = 20;
             inputVisitante.min = 0;
             inputVisitante.className = "w-12 text-center border rounded";
 
             // Bloqueo por fecha
-            if (estadoPartido === "en-juego") {
+            if (estadoPartido !== "pendiente") {
                 inputLocal.disabled = true;
                 inputVisitante.disabled = true;
-                inputLocal.classList.add("bg-gray-200", "cursor-not-allowed");
-                inputVisitante.classList.add("bg-gray-200", "cursor-not-allowed");
+                inputLocal.classList.add("bg-gray-200");
+                inputVisitante.classList.add("bg-gray-200");
             }
-            
+
+            // Mostrar resultado real y puntos
+            if (estadoPartido === "finalizado") {
+                const resultadoTexto = document.createElement("p");
+                resultadoTexto.className = "text-sm font-semibold mt-1";
+                resultadoTexto.textContent = `Resultado: ${partido.resultado}`;
+
+                info.appendChild(resultadoTexto);
+
+                const pronosticoGuardado = localStorage.getItem(clave);
+                if (pronosticoGuardado) {
+                    const puntos = calcularPuntos(pronosticoGuardado, partido.resultado);
+
+                    const puntosTexto = document.createElement("p");
+                    puntosTexto.className =
+                        puntos === 5
+                            ? "text-green-600 font-bold"
+                            : puntos === 3
+                            ? "text-yellow-600 font-bold"
+                            : "text-red-600 font-bold";
+                    
+                    puntosTexto.textContent = `+${puntos} pts`;
+                    info.appendChild(puntosTexto);
+                }
+            }
+
             // Cargar pronóstico guardado
             const guardado = localStorage.getItem(clave);
             if (guardado) {
@@ -151,6 +186,20 @@ function renderizarPartidosSemana() {
 
         main.appendChild(seccion);
     }
+}
+// Calcular puntos
+function calcularPuntos(pronostico, resultado) {
+    const [pL, pV] = pronostico.split("-").map(Number);
+    const [rL, rV] = resultado.split("-").map(Number);
+
+    if (pL === rL && pV === rV) return 5;
+
+    const signoPronostico = Math.sign(pL - pV);
+    const signoResultado = Math.sign(rL - rV);
+
+    if (signoPronostico === signoResultado) return 3;
+
+    return 0;
 }
 
 // Ejecutar al cargar la pagina
