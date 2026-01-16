@@ -15,7 +15,7 @@ const partidosSimulados = [
     {
         liga: "Champions League",
         fase: "cuartos",
-        penales: true,
+        idaVuelta: true,
         fecha: "2025-07-18T14:00:00",
         equipo1: "Real Madrid",
         equipo2: "Manchester City",
@@ -26,7 +26,7 @@ const partidosSimulados = [
     },
     {
         liga: "Champions League",
-        fecha: "2025-07-21T16:00:00",
+        fecha: "2026-07-21T16:00:00",
         equipo1: "Barcelona",
         equipo2: "PSG"
     }
@@ -230,6 +230,53 @@ function renderizarPartidosSemana() {
             pronostico.append(inputLocal, separador, inputVisitante);
             div.append(info, pronostico);
             seccion.appendChild(div);
+
+            if (partido.idaVuelta) {
+                const claveIda = `${clave}_ida`;
+                const claveVuelta = `${clave}_vuelta`;
+
+                if (necesitaPenales(partido, claveIda, claveVuelta)) {
+                    const penalesDiv = document.createElement("div");
+                    penalesDiv.className = "flex items-center gap-2 mt-2";
+
+                    const penalesLocal = document.createElement("input");
+                    penalesLocal.type = "number";
+                    penalesLocal.min = 0;
+                    penalesLocal.max = 30;
+                    penalesLocal.className = "w-12 text-center border rounded";
+
+                    const textoPenales = document.createElement("span");
+                    textoPenales.textContent = "Penales";
+
+                    const penalesVisitante = document.createElement("input");
+                    penalesVisitante.type = "number";
+                    penalesVisitante.min = 0;
+                    penalesVisitante.max = 30;
+                    penalesVisitante.className = "w-12 text-center border rounded";
+
+                    const clavePenales = `${clave}_penales`;
+
+                    // Cargar guardado
+                    const guardado = localStorage.getItem(clavePenales);
+                    if (guardado) {
+                        const [pl, pv] = guardado.split("-");
+                        penalesLocal.value = pl;
+                        penalesVisitante.value = pv;
+                    }
+
+                    // Guardar automático
+                    function guardarPenales() {
+                        if (penalesLocal.value === "" || penalesVisitante.value === "") return;
+                        localStorage.setItem(clavePenales, `${penalesLocal.value}-${penalesVisitante.value}`);
+                    }
+
+                    penalesLocal.addEventListener("input", guardarPenales);
+                    penalesVisitante.addEventListener("input", guardarPenales);
+
+                    penalesDiv.append(penalesLocal, textoPenales, penalesVisitante);
+                    info.appendChild(penalesDiv);
+                }
+            }
         });
 
         main.appendChild(seccion);
@@ -288,6 +335,29 @@ function calcularPuntos(pronostico, partido) {
     }
 
     return puntos;
+}
+
+function obtenerGlobalPronostico(claveIda, claveVuelta) {
+    const ida = localStorage.getItem(claveIda);
+    const vuelta = localStorage.getItem(claveVuelta);
+
+    if (!ida || !vuelta) return null;
+
+    const [iL, iV] = ida.split("-").map(Number);
+    const [vL, vV] = vuelta.split("-").map(Number);
+
+    return {
+        local: iL + vL,
+        visitante: iV + vV
+    };
+}
+function necesitaPenales(partido, claveIda, claveVuelta) {
+    if (!partido.idaVuelta || !partido.fase) return false;
+
+    const global = obtenerGlobalPronostico(claveIda, claveVuelta);
+    if (!global) return false;
+
+    return global.local === global.visitante;
 }
 
 // Ejecutar al cargar la pagina
