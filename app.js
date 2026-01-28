@@ -4,18 +4,20 @@ const partidosSimulados = [
         fecha: "2025-07-19T19:00:00",
         equipo1: "América",
         equipo2: "Guadalajara",
+        instancia: "unica",
         resultado: "2-1"
     },
     {
         liga: "Liga MX",
         fecha: "2025-07-20T21:00:00",
         equipo1: "Tigres",
-        equipo2: "Monterrey"
+        equipo2: "Monterrey",
+        instancia: "unica"
     },
     {
         liga: "Champions League",
         fase: "cuartos",
-        idaVuelta: true,
+        instancia: "ida",
         fecha: "2025-07-18T14:00:00",
         equipo1: "Real Madrid",
         equipo2: "Manchester City",
@@ -26,6 +28,8 @@ const partidosSimulados = [
     },
     {
         liga: "Champions League",
+        fase: "cuartos",
+        instancia: "vuelta",
         fecha: "2026-07-21T16:00:00",
         equipo1: "Barcelona",
         equipo2: "PSG"
@@ -61,227 +65,151 @@ function renderizarPartidosSemana() {
     const ligasMap = {};
 
     // Agrupar partidos por liga
-    partidosSimulados.forEach(partido => {
-        if (!ligasMap[partido.liga]) {
-            ligasMap[partido.liga] = [];
+    partidosSimulados.forEach(p => {
+        if (!ligasMap[p.liga]) {
+            ligasMap[p.liga] = [];
         }
-        ligasMap[partido.liga].push(partido);
+        ligasMap[p.liga].push(p);
     });
 
     for (const nombreLiga in ligasMap) {
         const seccion = document.createElement("section");
         seccion.className = "bg-white rounded-xl shadow p-5 space-y-3";
 
-        const titulo = document.createElement("h2");
-        titulo.textContent = nombreLiga;
-        titulo.className = "text-xl font-bold mb-2";
-        seccion.appendChild(titulo);
+        const h2 = document.createElement("h2");
+        h2.textContent = nombreLiga;
+        h2.className = "text-xl font-bold";
+        seccion.appendChild(h2);
 
         ligasMap[nombreLiga].forEach(partido => {
             const div = document.createElement("div");
-            div.className = "flex items-center justify-between gap-4 p-3 border rounded-lg";
+            div.className = "flex justify-between gap-4 p-3 border rounded-lg";
 
             const info = document.createElement("div");
             info.className = "flex-1";
 
-            const equipos = `${partido.equipo1} vs ${partido.equipo2}`;
-            const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}`;
+            const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_${partido.instancia}`;
 
-            const fechaPartido = new Date(partido.fecha);
+            const fecha = new Date(partido.fecha);
             const ahora = new Date();
 
-            const fecha = new Date(partido.fecha).toLocaleString("es-MX", {
+            let estado = "pendiente";
+            if (partido.resultado) estado = "finalizado";
+            else if (ahora >= fecha) estado = "en-juego";
+            
+            // ===== TITULO =====
+            const titulo = document.createElement("p");
+            titulo.className = "font-semibold";
+            titulo.textContent = `${partido.equipo1} vs ${partido.equipo2}`;
+
+            // ===== BADGES =====
+            const badges = document.createElement("div");
+            badges.className = "flex gap-2 text-xs text-gray-600";
+
+            if (partido.fase) {
+                badges.appendChild(crearBadge(`${partido.fase.toUpperCase()} · ${partido.instancia.toUpperCase()}`));
+            }
+
+            badges.appendChild(crearBadge(
+                estado === "finalizado" ? "Finalizado" :
+                estado === "en-juego" ? "En juego" : "Pendiente"
+            ));
+            
+            info.append(titulo, badges);
+
+            // ===== FECHA =====
+            const fechaTxt = document.createElement("p");
+            fechaTxt.className = "text-sm text-gray-500";
+            fechaTxt.textContent = fecha.toLocaleString("es-MX", {
                 weekday: "short",
                 day: "numeric",
                 month: "short",
                 hour: "2-digit",
                 minute: "2-digit"
             });
+            info.appendChild(fechaTxt);
 
-            // ===== BADGE =====
-            const badge = document.createElement("span");
-            let estadoPartido = "pendiente";
-
-            if (partido.resultado) {
-                estadoPartido = "finalizado";
-            } else if (ahora >=  fechaPartido) {
-                estadoPartido = "en-juego";
-            }
-            if (estadoPartido === "finalizado"){
-                badge.textContent = "Finalizado";
-                badge.className = "text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded-full font-semibold";
-            } else if (estadoPartido === "en-juego") {
-                badge.textContent = "En juego";
-                badge.className = "text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold";
-            } else {
-                badge.textContent = "Pendiente";
-                badge.className = "text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full font-semibold";
-            }
-
-            // ===== TÍTULO =====
-            const tituloPartido = document.createElement("div");
-            tituloPartido.className = "flex items-center gap-2";
-
-            const textoEquipos = document.createElement("p");
-            textoEquipos.className = "font-semibold";
-            textoEquipos.textContent = equipos;
-
-            tituloPartido.append(textoEquipos, badge);
-            info.append(tituloPartido);
-
-            // ===== FECHA =====
-            const fechaTexto = document.createElement("p");
-            fechaTexto.className = "text-sm text-gray-500";
-            fechaTexto.textContent = fecha;
-            info.appendChild(fechaTexto);
-
-            // ===== PRONÓSTTICO =====
-            const pronostico = document.createElement("div");
-            pronostico.className = "flex items-center gap-2";
-
-            const inputLocal = document.createElement("input");
-            inputLocal.type = "number";
-            inputLocal.max = 20;
-            inputLocal.min = 0;
-            inputLocal.className = "w-12 text-center border rounded";
-
-            const separador = document.createElement("span");
-            separador.textContent = "-";
-            separador.className = "font-bold";
-
-            const inputVisitante = document.createElement("input");
-            inputVisitante.type = "number";
-            inputVisitante.max = 20;
-            inputVisitante.min = 0;
-            inputVisitante.className = "w-12 text-center border rounded";
-
-            // Bloqueo por fecha
-            if (estadoPartido !== "pendiente") {
-                inputLocal.disabled = true;
-                inputVisitante.disabled = true;
-                inputLocal.classList.add("bg-gray-200");
-                inputVisitante.classList.add("bg-gray-200");
-            }
-
-            // Mostrar resultado real y puntos
-            if (estadoPartido === "finalizado") {
-                const resultadoTexto = document.createElement("p");
-                resultadoTexto.className = "text-sm font-semibold mt-1";
-                let textoResultado = "";
-
-                if (typeof partido.resultado === "string") {
-                    textoResultado = partido.resultado;
-                } else if (typeof partido.resultado === "object") {
-                    textoResultado = partido.resultado.marcador;
-                }
-
-                resultadoTexto.textContent = `Resultado: ${textoResultado}`;
-
-                info.appendChild(resultadoTexto);
-
-                if (partido.resultado?.penales) {
-                    const penalesTexto = document.createElement("p");
-                    penalesTexto.className = "text-sm text-gray-500";
-                    penalesTexto.textContent = `Penales: ${partido.resultado.penales}`;
-                    info.appendChild(penalesTexto);
-                }
-                const pronosticoGuardado = localStorage.getItem(clave);
-                if (pronosticoGuardado) {
-                    const puntos = calcularPuntos(pronosticoGuardado, partido);
-
-                    const puntosTexto = document.createElement("p");
-                    puntosTexto.className =
-                        puntos === 5
-                            ? "text-green-600 font-bold"
-                            : puntos === 3
-                            ? "text-yellow-600 font-bold"
-                            : "text-red-600 font-bold";
-                    
-                    puntosTexto.textContent = `+${puntos} pts`;
-                    info.appendChild(puntosTexto);
-                }
-
-                if (partido.fase) {
-                    const bonusTexto = document.createElement("p");
-                    bonusTexto.className = "text-blue-600 font-semibold text-sm";
-                    bonusTexto.textContent = `Bonus fase ${partido.fase}`;
-                    info.appendChild(bonusTexto);
-                }
-            }
-
-            // Cargar pronóstico guardado
-            const guardado = localStorage.getItem(clave);
-            if (guardado) {
-                const [gLocal, gVisitante] = guardado.split("-");
-                inputLocal.value = gLocal;
-                inputVisitante.value = gVisitante;
-            }
-
-            // Guardar automáticamente
-            function guardarPronostico(){
-                if (inputLocal.value === "" || inputVisitante.value === "") return;
-                const valor = `${inputLocal.value}-${inputVisitante.value}`;
-                localStorage.setItem(clave, valor);
-            }
-
-            inputLocal.addEventListener("input", guardarPronostico);
-            inputVisitante.addEventListener("input", guardarPronostico);
-
-            pronostico.append(inputLocal, separador, inputVisitante);
+            // ===== INPUTS =====
+            const pronostico = crearInputsPronostico(clave, estado);
             div.append(info, pronostico);
-            seccion.appendChild(div);
 
-            if (partido.idaVuelta) {
-                const claveIda = `${clave}_ida`;
-                const claveVuelta = `${clave}_vuelta`;
+            // ===== RESULTADO FINAL =====
+            if (estado === "finalizado") {
+                const res = document.createElement("p");
+                res.className = "text-sm font-semibold mt-1";
+                res.textContent = `Resultado: ${
+                    typeof partido.resultado === "string"
+                        ? partido.resultado
+                        : partido.resultado.marcador
+                }`;
+                info.appendChild(res);
 
-                if (necesitaPenales(partido, claveIda, claveVuelta)) {
-                    const penalesDiv = document.createElement("div");
-                    penalesDiv.className = "flex items-center gap-2 mt-2";
-
-                    const penalesLocal = document.createElement("input");
-                    penalesLocal.type = "number";
-                    penalesLocal.min = 0;
-                    penalesLocal.max = 30;
-                    penalesLocal.className = "w-12 text-center border rounded";
-
-                    const textoPenales = document.createElement("span");
-                    textoPenales.textContent = "Penales";
-
-                    const penalesVisitante = document.createElement("input");
-                    penalesVisitante.type = "number";
-                    penalesVisitante.min = 0;
-                    penalesVisitante.max = 30;
-                    penalesVisitante.className = "w-12 text-center border rounded";
-
-                    const clavePenales = `${clave}_penales`;
-
-                    // Cargar guardado
-                    const guardado = localStorage.getItem(clavePenales);
-                    if (guardado) {
-                        const [pl, pv] = guardado.split("-");
-                        penalesLocal.value = pl;
-                        penalesVisitante.value = pv;
-                    }
-
-                    // Guardar automático
-                    function guardarPenales() {
-                        if (penalesLocal.value === "" || penalesVisitante.value === "") return;
-                        localStorage.setItem(clavePenales, `${penalesLocal.value}-${penalesVisitante.value}`);
-                    }
-
-                    penalesLocal.addEventListener("input", guardarPenales);
-                    penalesVisitante.addEventListener("input", guardarPenales);
-
-                    penalesDiv.append(penalesLocal, textoPenales, penalesVisitante);
-                    info.appendChild(penalesDiv);
+                const guardado = localStorage.getItem(clave);
+                if (guardado) {
+                    const puntos = calcularPuntos(guardado, partido);
+                    const pts = document.createElement("p");
+                    pts.textContent = `+${puntos} pts`;
+                    pts.className = "font-bold text-green-600";
+                    info.appendChild(pts);
                 }
             }
+            
+            seccion.appendChild(div);
+        
         });
 
         main.appendChild(seccion);
     }
 }
+// Crear inputs
+function crearInputsPronostico(clave, estado) {
+    const cont = document.createElement("div");
+    cont.className = "flex items-center gap-2";
+
+    const l = document.createElement("input");
+    const v = document.createElement("input");
+
+    [l, v].forEach(i => {
+        i.type = "number";
+        i.min = 0;
+        i.max = 20;
+        i.className = "w-12 text-center border rounded";
+        if (estado !== "pendiente") {
+            i.disabled = true;
+            i.classList.add("bg-gray-200");
+        }
+    });
+
+    const sep = document.createElement("span");
+    sep.textContent = "-";
+
+    const guardado = localStorage.getItem(clave);
+    if (guardado) {
+        const [gl, gv] = guardado.split("-");
+        l.value = gl;
+        v.value = gv;
+    }
+
+    function guardar() {
+        if (l.value === "" || v.value === "") return;
+        localStorage.setItem(clave, `${l.value}-${v.value}`);
+    }
+
+    l.addEventListener("input", guardar);
+    v.addEventListener("input", guardar);
+
+    cont.append(l, sep, v);
+    return cont;
+}
+
+// Crear badges
+function crearBadge(texto) {
+    const span = document.createElement("span");
+    span.textContent = texto;
+    span.className = "px-2 py-1 bg-gray-100 rounded-full";
+    return span;
+}
+
 // Calcular puntos
 function calcularPuntos(pronostico, partido) {
     const [pL, pV] = pronostico.split("-").map(Number);
