@@ -9,7 +9,7 @@ const partidosSimulados = [
     },
     {
         liga: "Liga MX",
-        fecha: "2025-07-20T21:00:00",
+        fecha: "2026-07-20T21:00:00",
         equipo1: "Tigres",
         equipo2: "Monterrey",
         instancia: "unica"
@@ -32,7 +32,8 @@ const partidosSimulados = [
         instancia: "vuelta",
         fecha: "2026-07-21T16:00:00",
         equipo1: "Barcelona",
-        equipo2: "PSG"
+        equipo2: "PSG",
+        desbloqueado: false
     }
 ];
 
@@ -133,8 +134,12 @@ function renderizarPartidosSemana() {
             info.appendChild(fechaTxt);
 
             // ===== INPUTS =====
-            const pronostico = crearInputsPronostico(clave, estado);
+            const pronostico = crearInputsPronostico(clave, partido, estado);
             div.append(info, pronostico);
+
+            if (esVuelta(partido) && !puedePronosticar(partido)) {
+                badges.appendChild(crearBadge("Esperando ida"));
+            }
 
             // ===== PENALES (solo en vuelta) =====
             if (esVuelta(partido)) {
@@ -220,19 +225,21 @@ function renderizarPartidosSemana() {
     }
 }
 // Crear inputs
-function crearInputsPronostico(clave, estado) {
+function crearInputsPronostico(clave, partido, estado) {
     const cont = document.createElement("div");
     cont.className = "flex items-center gap-2";
 
     const l = document.createElement("input");
     const v = document.createElement("input");
 
+    const habilitado = estado === "pendiente" && puedePronosticar(partido);
+
     [l, v].forEach(i => {
         i.type = "number";
         i.min = 0;
         i.max = 20;
         i.className = "w-12 text-center border rounded";
-        if (estado !== "pendiente") {
+        if (!habilitado) {
             i.disabled = true;
             i.classList.add("bg-gray-200");
         }
@@ -362,6 +369,30 @@ function necesitaPenales(partido, claveIda, claveVuelta) {
     if (!global) return false;
 
     return global.local === global.visitante;
+}
+
+function idaFinalizada(partidoVuelta) {
+    const partidoIda = partidosSimulados.find(p =>
+        p.liga === partidoVuelta.liga &&
+        p.equipo1 === partidoVuelta.equipo1 &&
+        p.equipo2 === partidoVuelta.equipo2 &&
+        p.instancia === "ida"
+    );
+
+    return partidoIda && partidoIda.resultado;
+}
+
+function puedePronosticar(partido) {
+    if (esUnica(partido)) return true;
+
+    if (esIda(partido)) return true;
+
+    if (esVuelta(partido)) {
+        if (partido.desbloqueado) return true;
+        return idaFinalizada(partido);
+    }
+
+    return false;
 }
 
 // Ejecutar al cargar la pagina
