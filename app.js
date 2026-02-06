@@ -89,6 +89,7 @@ function renderizarPartidosSemana() {
             info.className = "flex-1";
 
             const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_${partido.instancia}`;
+            const clavePenales = `${clave}_penales`;
 
             const fecha = new Date(partido.fecha);
             const ahora = new Date();
@@ -106,8 +107,10 @@ function renderizarPartidosSemana() {
             const badges = document.createElement("div");
             badges.className = "flex gap-2 text-xs text-gray-600";
 
-            if (partido.fase) {
+            if (partido.instancia !== "unica") {
                 badges.appendChild(crearBadge(`${partido.fase.toUpperCase()} · ${partido.instancia.toUpperCase()}`));
+            } else if (partido.fase) {
+                badges.appendChild(crearBadge(partido.fase.toUpperCase()));
             }
 
             badges.appendChild(crearBadge(
@@ -133,6 +136,51 @@ function renderizarPartidosSemana() {
             const pronostico = crearInputsPronostico(clave, estado);
             div.append(info, pronostico);
 
+            // ===== PENALES (solo en vuelta) =====
+            if (esVuelta(partido)) {
+                const claveIda = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_ida`;
+                const claveVuelta = clave;
+
+                if (necesitaPenales(partido, claveIda, claveVuelta) && estado === "pendiente") {
+                    const penalesDiv = document.createElement("div");
+                    penalesDiv.className = "flex items-center gap-2 mt-2";
+
+                    const pLocal = document.createElement("input");
+                    const pVisitante = document.createElement("input");
+
+                    [pLocal, pVisitante].forEach(p => {
+                        p.type = "number";
+                        p.min = 0;
+                        p.max = 30;
+                        p.className = "w-12 text-center border rounded"
+                    });
+
+                    const txt = document.createElement("span");
+                    txt.textContent = "Penales";
+
+                    const clavePenales = `${clave}_penales`;
+
+                    // Cargar guardado
+                    const guardado = localStorage.getItem(clavePenales);
+                    if (guardado) {
+                        const [pl, pv] = guardado.split("-");
+                        pLocal.value = pl;
+                        pVisitante.value = pv;
+                    }
+
+                    function guardarPenales() {
+                        if (pLocal.value === "" || pVisitante.value === "") return;
+                        localStorage.setItem(clavePenales, `${pLocal.value}-${pVisitante.value}`);
+                    }
+
+                    pLocal.addEventListener("input", guardarPenales);
+                    pVisitante.addEventListener("input", guardarPenales);
+
+                    penalesDiv.append(pLocal, txt, pVisitante);
+                    info.appendChild(penalesDiv);
+                }
+            }
+
             // ===== RESULTADO FINAL =====
             if (estado === "finalizado") {
                 const res = document.createElement("p");
@@ -151,6 +199,16 @@ function renderizarPartidosSemana() {
                     pts.textContent = `+${puntos} pts`;
                     pts.className = "font-bold text-green-600";
                     info.appendChild(pts);
+                }
+
+                const clavePenales = `${clave}_penales`;
+                const penalesGuardados = localStorage.getItem(clavePenales);
+
+                if (penalesGuardados) {
+                    const penalesTxt = document.createElement("p");
+                    penalesTxt.className = "text-sm text-gray-500";
+                    penalesTxt.textContent = `Penales: ${penalesGuardados}`;
+                    info.appendChild(penalesTxt);
                 }
             }
             
@@ -241,12 +299,17 @@ function calcularPuntos(pronostico, partido) {
     }
 
     // ===== PENALES =====
-    if (configuracionPuntos.penales.activo && partido.penales && partido.resultado?.ganador) {
-        const signoPronostico = Math.sign(pL - pV);
-        const ganadorPronosticado = signoPronostico > 0 ? "local" : signoPronostico < 0 ? "visitante" : "empate";
+    if (configuracionPuntos.penales.activo && esVuelta(partido) && partido.resultado?.ganador) {
+        const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_vuelta_penales`;
+        const penales = localStorage.getItem(clave);
+        
+        if (penales) {
+            const [pl, pv] = penales.split("-").map(Number);
+            const ganadorPronosticado = pl > pv ? "local" : pl < pv ? "visitante" : "empate";
 
-        if (ganadorPronosticado === partido.resultado.ganador) {
-            puntos += configuracionPuntos.penales.puntos;
+            if (ganadorPronosticado === partido.resultado.ganador) {
+                puntos += configuracionPuntos.penales.puntos;
+            }
         }
     }
 
@@ -279,8 +342,21 @@ function obtenerGlobalPronostico(claveIda, claveVuelta) {
         visitante: iV + vV
     };
 }
+
+function esIda(partido) {
+    return partido.instancia === "ida";
+}
+
+function esVuelta(partido) {
+    return partido.instancia === "vuelta";
+}
+
+function esUnica(partido) {
+    return partido.instancia === "unica";
+}
 function necesitaPenales(partido, claveIda, claveVuelta) {
-    if (!partido.idaVuelta || !partido.fase) return false;
+    if (!esVuelta(partido)) return false;
+    if (!partido.fase) return false;
 
     const global = obtenerGlobalPronostico(claveIda, claveVuelta);
     if (!global) return false;
