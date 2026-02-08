@@ -1,6 +1,19 @@
+const FASES_ELIMINACION = {
+    GRUPOS: 1,
+    DIECISEISAVOS: 2,
+    OCTAVOS: 3,
+    CUARTOS: 4,
+    SEMIFINAL: 5,
+    TERCERLUGAR: 6,
+    FINAL: 7
+}
+
 const partidosSimulados = [
     {
         liga: "Liga MX",
+        tipoTorneo: "liga",
+        fase: "Jornada 6",
+        ordenFase: 6,
         fecha: "2025-07-19T19:00:00",
         equipo1: "América",
         equipo2: "Guadalajara",
@@ -9,26 +22,46 @@ const partidosSimulados = [
     },
     {
         liga: "Liga MX",
+        tipoTorneo: "liga",
+        fase: "Jornada 7",
+        ordenFase: 7,
         fecha: "2026-07-20T21:00:00",
         equipo1: "Tigres",
         equipo2: "Monterrey",
         instancia: "unica"
     },
     {
+        idSerie: "RM-MCI-CUARTOS-2025",
         liga: "Champions League",
+        tipoTorneo: "eliminacion",
         fase: "cuartos",
+        ordenFase: FASES_ELIMINACION.CUARTOS,
         instancia: "ida",
         fecha: "2025-07-18T14:00:00",
         equipo1: "Real Madrid",
         equipo2: "Manchester City",
         resultado: {
             marcador: "1-1",
-            ganador: "local"
+            ganador: "empate"
         }
     },
     {
+        idSerie: "RM-MCI-CUARTOS-2025",
         liga: "Champions League",
+        tipoTorneo: "eliminacion",
         fase: "cuartos",
+        ordenFase: FASES_ELIMINACION.CUARTOS,
+        instancia: "vuelta",
+        fecha: "2025-07-21T16:00:00",
+        equipo1: "Manchester City",
+        equipo2: "Real Madrid",
+        desbloqueado: false
+    },
+    {
+        liga: "Champions League",
+        tipoTorneo: "eliminacion",
+        fase: "cuartos",
+        ordenFase: FASES_ELIMINACION.CUARTOS,
         instancia: "vuelta",
         fecha: "2026-07-21T16:00:00",
         equipo1: "Barcelona",
@@ -89,9 +122,10 @@ function renderizarPartidosSemana() {
             const info = document.createElement("div");
             info.className = "flex-1";
 
-            const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_${partido.instancia}`;
-            const clavePenales = `${clave}_penales`;
-
+            const clave = partido.idSerie
+                ? `${partido.idSerie}_${partido.instancia}`
+                : `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_${partido.instancia}`;
+            
             const fecha = new Date(partido.fecha);
             const ahora = new Date();
 
@@ -110,9 +144,7 @@ function renderizarPartidosSemana() {
 
             if (partido.instancia !== "unica") {
                 badges.appendChild(crearBadge(`${partido.fase.toUpperCase()} · ${partido.instancia.toUpperCase()}`));
-            } else if (partido.fase) {
-                badges.appendChild(crearBadge(partido.fase.toUpperCase()));
-            }
+            } 
 
             badges.appendChild(crearBadge(
                 estado === "finalizado" ? "Finalizado" :
@@ -137,13 +169,13 @@ function renderizarPartidosSemana() {
             const pronostico = crearInputsPronostico(clave, partido, estado);
             div.append(info, pronostico);
 
-            if (esVuelta(partido) && !puedePronosticar(partido)) {
+            if (esVuelta(partido) && !puedePronosticar(partido, partidosSimulados)) {
                 badges.appendChild(crearBadge("Esperando ida"));
             }
 
             // ===== PENALES (solo en vuelta) =====
             if (esVuelta(partido)) {
-                const claveIda = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_ida`;
+                const claveIda = `${partido.idSerie}_ida`;
                 const claveVuelta = clave;
 
                 if (necesitaPenales(partido, claveIda, claveVuelta) && estado === "pendiente") {
@@ -232,7 +264,7 @@ function crearInputsPronostico(clave, partido, estado) {
     const l = document.createElement("input");
     const v = document.createElement("input");
 
-    const habilitado = estado === "pendiente" && puedePronosticar(partido);
+    const habilitado = estado === "pendiente" && puedePronosticar(partido, partidosSimulados);
 
     [l, v].forEach(i => {
         i.type = "number";
@@ -307,7 +339,7 @@ function calcularPuntos(pronostico, partido) {
 
     // ===== PENALES =====
     if (configuracionPuntos.penales.activo && esVuelta(partido) && partido.resultado?.ganador) {
-        const clave = `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_vuelta_penales`;
+        const clave = `${partido.idSerie}_vuelta_penales`;
         const penales = localStorage.getItem(clave);
         
         if (penales) {
@@ -335,9 +367,9 @@ function calcularPuntos(pronostico, partido) {
     return puntos;
 }
 
-function obtenerGlobalPronostico(claveIda, claveVuelta) {
-    const ida = localStorage.getItem(claveIda);
-    const vuelta = localStorage.getItem(claveVuelta);
+function obtenerGlobalPronostico(idSerie) {
+    const ida = localStorage.getItem(`${idSerie}_ida`);
+    const vuelta = localStorage.getItem(`${idSerie}_vuelta`);
 
     if (!ida || !vuelta) return null;
 
@@ -361,35 +393,44 @@ function esVuelta(partido) {
 function esUnica(partido) {
     return partido.instancia === "unica";
 }
-function necesitaPenales(partido, claveIda, claveVuelta) {
-    if (!esVuelta(partido)) return false;
-    if (!partido.fase) return false;
+function necesitaPenales(partido) {
+    if (!esVuelta(partido) || !partido.idSerie) return false;
+    
+    const global = obtenerGlobalPronostico(partido.idSerie);
 
-    const global = obtenerGlobalPronostico(claveIda, claveVuelta);
-    if (!global) return false;
 
-    return global.local === global.visitante;
+    return global && global.local === global.visitante;
 }
 
-function idaFinalizada(partidoVuelta) {
-    const partidoIda = partidosSimulados.find(p =>
-        p.liga === partidoVuelta.liga &&
-        p.equipo1 === partidoVuelta.equipo1 &&
-        p.equipo2 === partidoVuelta.equipo2 &&
-        p.instancia === "ida"
+function idaFinalizada(partido, partidos) {
+    if (!esVuelta(partido) || !partido.idSerie) return true;
+
+    return partidos.some(p =>
+        p.idSerie === partido.idSerie &&
+        p.instancia === "ida" &&
+        !!p.resultado
+    );
+}
+
+function faseAnteriorCerrada(partido) {
+    if (partido.ordenFase === 1) return true;
+
+    const faseAnterior = partidosSimulados.filter(p =>
+        p.liga === partido.liga &&
+        p.ordenFase === partido.ordenFase - 1
     );
 
-    return partidoIda && partidoIda.resultado;
+    if (faseAnterior.length === 0) return true;
+
+    return faseAnterior.every(p => !!p.resultado);
 }
 
-function puedePronosticar(partido) {
+function puedePronosticar(partido, partidosSimulados) {
     if (esUnica(partido)) return true;
-
-    if (esIda(partido)) return true;
-
+    if (esIda(partido)) return faseAnteriorCerrada(partido);
     if (esVuelta(partido)) {
         if (partido.desbloqueado) return true;
-        return idaFinalizada(partido);
+        return idaFinalizada(partido, partidosSimulados) && faseAnteriorCerrada(partido);
     }
 
     return false;
