@@ -37,7 +37,7 @@ const partidosSimulados = [
         fase: "cuartos",
         ordenFase: FASES_ELIMINACION.CUARTOS,
         instancia: "ida",
-        fecha: "2025-07-18T14:00:00",
+        fecha: "2026-07-18T14:00:00",
         equipo1: "Real Madrid",
         equipo2: "Manchester City",
         resultado: {
@@ -52,10 +52,10 @@ const partidosSimulados = [
         fase: "cuartos",
         ordenFase: FASES_ELIMINACION.CUARTOS,
         instancia: "vuelta",
-        fecha: "2025-07-21T16:00:00",
+        fecha: "2026-07-21T16:00:00",
         equipo1: "Manchester City",
         equipo2: "Real Madrid",
-        desbloqueado: false
+        desbloqueado: true
     },
     {
         liga: "Champions League",
@@ -169,9 +169,8 @@ function renderizarPartidosSemana() {
             const pronostico = crearInputsPronostico(clave, partido, estado);
             div.append(info, pronostico);
 
-            if (esVuelta(partido) && !puedePronosticar(partido, partidosSimulados)) {
-                badges.appendChild(crearBadge("Esperando ida"));
-            }
+            const badgePronostico = obtenerBadgePronostico(partido, estado, partidosSimulados);
+            badges.appendChild(crearBadge(badgePronostico.texto, badgePronostico.color));
 
             // ===== PENALES (solo en vuelta) =====
             if (esVuelta(partido)) {
@@ -300,11 +299,37 @@ function crearInputsPronostico(clave, partido, estado) {
 }
 
 // Crear badges
-function crearBadge(texto) {
+function crearBadge(texto, color = "bg-gray-100") {
     const span = document.createElement("span");
     span.textContent = texto;
-    span.className = "px-2 py-1 bg-gray-100 rounded-full";
+    span.className = `px-2 py-1 ${color} rounded-full text-xs font-medium`;
     return span;
+}
+
+function obtenerBadgePronostico(partido, estado, partidosSimulados) {
+    if (estado === "finalizado") {
+        return { texto: "Pronóstico cerrado", color: "bg-gray-200" };
+    }
+
+    if (estado === "en-juego") {
+        return { texto: "Pronóstico cerrado", color: "bg-red-100" };
+    }
+
+    if (esVuelta(partido)) {
+        if (partido.desbloqueado) {
+            return { texto: "Desbloqueado por admin", color: "bg-blue-100" };
+        }
+
+        if (!idaFinalizada(partido, partidosSimulados)) {
+            return { texto: "Esperando ida", color: "bg-yellow-100" };
+        }
+    }
+
+    if (!faseAnteriorCerrada(partido)) {
+        return { texto: "Fase anterior no finalizada", color: "bg-yellow-100" };
+    }
+
+    return { texto: "Pronóstico abierto", color: "bg-green-100" };
 }
 
 // Calcular puntos
