@@ -55,7 +55,10 @@ const partidosSimulados = [
         fecha: "2026-07-21T16:00:00",
         equipo1: "Manchester City",
         equipo2: "Real Madrid",
-        desbloqueado: true
+        resultado: {
+            marcador: "3-1",
+            ganador: "empate"
+        }
     },
     {
         liga: "Champions League",
@@ -246,6 +249,15 @@ function renderizarPartidosSemana() {
                     penalesTxt.textContent = `Penales: ${penalesGuardados}`;
                     info.appendChild(penalesTxt);
                 }
+
+                const textoAvanza = obtenerTextoAvanza(partido);
+
+                if (textoAvanza) {
+                    const avance = document.createElement("p");
+                    avance.className = "text-sm font-semibold text-blue-600 mt-1";
+                    avance.textContent = `🏆 ${textoAvanza}`;
+                    info.appendChild(avance);
+                }
             }
             
             seccion.appendChild(div);
@@ -308,7 +320,7 @@ function crearBadge(texto, color = "bg-gray-100") {
 
 function obtenerBadgePronostico(partido, estado, partidosSimulados) {
     if (estado === "finalizado") {
-        return { texto: "Pronóstico cerrado", color: "bg-gray-200" };
+        return { texto: "Pronóstico expirado", color: "bg-gray-200" };
     }
 
     if (estado === "en-juego") {
@@ -407,6 +419,48 @@ function obtenerGlobalPronostico(idSerie) {
     };
 }
 
+function obtenerGlobalReal(idSerie) {
+    const partidosSerie = partidosSimulados.filter(p =>
+        p.idSerie === idSerie && p.resultado
+    );
+
+    if (partidosSerie.length < 2) return null;
+
+    let local = 0;
+    let visitante = 0;
+
+    partidosSerie.forEach(p => {
+        const [gL, gV] = p.resultado.marcador.split("-").map(Number);
+        local += gL;
+        visitante += gV;
+    });
+
+    return { local, visitante };
+}
+
+function obtenerTextoAvanza(partido) {
+    if (!esVuelta(partido) || !partido.idSerie || !partido.resultado) return null;
+
+    const global = obtenerGlobalReal(partido.idSerie);
+    if (!global) return null;
+
+    let texto = "";
+
+    if (global.local > global.visitante) {
+        texto = `${partido.equipo1} avanzó`;
+    } else if (global.visitante > global.local) {
+        texto = `${partido.equipo2} avanzó`;
+    } else if (partido.resultado.ganador) {
+        const ganador = partido.resultado.ganador === "local"
+            ? partido.equipo1
+            : partido.equipo2;
+
+        texto = `${ganador} avanzó en penales`;
+    }
+
+    return `${texto} · Global ${global.local} - ${global.visitante}`;
+}
+
 function esIda(partido) {
     return partido.instancia === "ida";
 }
@@ -463,3 +517,4 @@ function puedePronosticar(partido, partidosSimulados) {
 
 // Ejecutar al cargar la pagina
 document.addEventListener("DOMContentLoaded", renderizarPartidosSemana);
+
