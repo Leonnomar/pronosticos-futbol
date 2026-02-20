@@ -25,10 +25,15 @@ const partidosSimulados = [
         tipoTorneo: "liga",
         fase: "Jornada 7",
         ordenFase: 7,
-        fecha: "2026-07-20T21:00:00",
+        fecha: "2026-02-20T13:00:00",
         equipo1: "Tigres",
         equipo2: "Monterrey",
-        instancia: "unica"
+        instancia: "unica",
+        liveData: {
+            minuto: 67,
+            marcador: "2 - 1",
+            tiempo: "2T"
+        }
     },
     {
         idSerie: "RM-MCI-CUARTOS-2025",
@@ -128,13 +133,8 @@ function renderizarPartidosSemana() {
             const clave = partido.idSerie
                 ? `${partido.idSerie}_${partido.instancia}`
                 : `${partido.liga}_${partido.equipo1}_vs_${partido.equipo2}_${partido.instancia}`;
-            
-            const fecha = new Date(partido.fecha);
-            const ahora = new Date();
 
-            let estado = "pendiente";
-            if (partido.resultado) estado = "finalizado";
-            else if (ahora >= fecha) estado = "en-juego";
+            let estado = obtenerEstado(partido);
             
             // ===== TITULO =====
             const titulo = document.createElement("p");
@@ -159,13 +159,7 @@ function renderizarPartidosSemana() {
             // ===== FECHA =====
             const fechaTxt = document.createElement("p");
             fechaTxt.className = "text-sm text-gray-500";
-            fechaTxt.textContent = fecha.toLocaleString("es-MX", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit"
-            });
+            fechaTxt.textContent = formatearFecha(partido.fecha)
             info.appendChild(fechaTxt);
 
             // ===== INPUTS =====
@@ -174,6 +168,19 @@ function renderizarPartidosSemana() {
 
             const badgePronostico = obtenerBadgePronostico(partido, estado, partidosSimulados);
             badges.appendChild(crearBadge(badgePronostico.texto, badgePronostico.color));
+
+            if (estado === "en-juego") {
+                if (partido.liveData) {
+                    badges.appendChild(crearBadge(
+                        `🟢 EN VIVO · ${partido.liveData.minuto}'`
+                    ));
+
+                    const liveTxt = document.createElement("p");
+                    liveTxt.className = "text-sm font-semibold text-red-600";
+                    liveTxt.textContent = `${partido.equipo1} ${partido.liveData.marcador} ${partido.equipo2}`;
+                    info.appendChild(liveTxt);
+                }
+            }
 
             // ===== PENALES (solo en vuelta) =====
             if (esVuelta(partido)) {
@@ -267,6 +274,28 @@ function renderizarPartidosSemana() {
         main.appendChild(seccion);
     }
 }
+
+function obtenerEstado(partido) {
+    const ahora = new Date();
+    const fecha = new Date(partido.fecha);
+
+    if (partido.resultado) return "finalizado";
+    if (partido.liveData) return "en-juego";
+    if (ahora >= fecha) return "en-juego";
+    return "pendiente";
+}
+
+function formatearFecha(fechaStr) {
+    const fecha = new Date(fechaStr);
+    return fecha.toLocaleString("es-MX", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
 // Crear inputs
 function crearInputsPronostico(clave, partido, estado) {
     const cont = document.createElement("div");
